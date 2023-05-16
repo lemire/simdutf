@@ -22,6 +22,26 @@
 #include "scalar/utf8.h"
 #include "scalar/utf16.h"
 
+
+#include "scalar/latin1_to_utf8/latin1_to_utf8.h"
+// #include "scalar/latin1_to_utf8/valid_latin1_to_utf8.h"
+
+#include "scalar/latin1_to_utf16/latin1_to_utf16.h"
+#include "scalar/latin1_to_utf16/valid_latin1_to_utf16.h"
+
+#include "scalar/latin1_to_utf32/latin1_to_utf32.h"
+#include "scalar/latin1_to_utf32/valid_latin1_to_utf32.h"
+
+#include "scalar/utf8_to_latin1/utf8_to_latin1.h"
+// #include "scalar/utf8_to_latin1/valid_utf8_to_latin1.h"
+
+#include "scalar/utf16_to_latin1/utf16_to_latin1.h"
+#include "scalar/utf16_to_latin1/valid_utf16_to_latin1.h"
+
+#include "scalar/utf32_to_latin1/utf32_to_latin1.h"
+#include "scalar/utf32_to_latin1/valid_utf32_to_latin1.h"
+
+
 namespace simdutf {
 namespace SIMDUTF_IMPLEMENTATION {
 
@@ -40,6 +60,27 @@ simdutf_warn_unused int implementation::detect_encodings(const char * input, siz
 
   return out;
 }
+
+
+// ********************************
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf16le(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+   return scalar::latin1_to_utf16::convert<endianness::LITTLE>(buf, len, utf16_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf16be(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+   return scalar::latin1_to_utf16::convert<endianness::BIG>(buf, len, utf16_output);
+}
+
+simdutf_warn_unused result implementation::convert_latin1_to_utf16le_with_errors(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+   return scalar::latin1_to_utf16::convert_with_errors<endianness::LITTLE>(buf, len, utf16_output);
+}
+
+simdutf_warn_unused result implementation::convert_latin1_to_utf16be_with_errors(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+   return scalar::latin1_to_utf16::convert_with_errors<endianness::BIG>(buf, len, utf16_output);
+}
+
+// ********************************
+
 
 simdutf_warn_unused bool implementation::validate_utf8(const char *buf, size_t len) const noexcept {
     return scalar::utf8::validate(buf, len);

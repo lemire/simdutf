@@ -27,6 +27,12 @@ public:
   simdutf_warn_unused result validate_utf16be_with_errors(const char16_t *buf, size_t len) const noexcept final;
   simdutf_warn_unused bool validate_utf32(const char32_t *buf, size_t len) const noexcept final;
   simdutf_warn_unused result validate_utf32_with_errors(const char32_t *buf, size_t len) const noexcept final;
+    // ***********
+    simdutf_warn_unused size_t convert_latin1_to_utf16le(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
+  simdutf_warn_unused size_t convert_latin1_to_utf16be(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
+  simdutf_warn_unused result convert_latin1_to_utf16le_with_errors(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
+  simdutf_warn_unused result convert_latin1_to_utf16be_with_errors(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
+//*********************
   simdutf_warn_unused size_t convert_utf8_to_utf16le(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
   simdutf_warn_unused size_t convert_utf8_to_utf16be(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;
   simdutf_warn_unused result convert_utf8_to_utf16le_with_errors(const char * buf, size_t len, char16_t* utf16_output) const noexcept final;

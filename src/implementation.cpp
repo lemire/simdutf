@@ -674,6 +674,13 @@ simdutf_warn_unused result validate_ascii_with_errors(const char *buf, size_t le
 }
 
 // **********************************************
+simdutf_warn_unused size_t convert_latin1_to_utf16le(const char * input, size_t length, char16_t* utf16_output) noexcept {
+  return get_active_implementation()->convert_latin1_to_utf16le(input, length, utf16_output);
+}
+simdutf_warn_unused size_t convert_latin1_to_utf16be(const char * input, size_t length, char16_t* utf16_output) noexcept {
+  return get_active_implementation()->convert_latin1_to_utf16be(input, length, utf16_output);
+}
+
 simdutf_warn_unused size_t convert_latin1_to_utf16(const char * input, size_t length, char16_t* utf16_output) noexcept {
   #if SIMDUTF_IS_BIG_ENDIAN
   return convert_latin1_to_utf16be(input, length, utf16_output);
@@ -681,12 +688,7 @@ simdutf_warn_unused size_t convert_latin1_to_utf16(const char * input, size_t le
   return convert_latin1_to_utf16le(input, length, utf16_output);
   #endif
 }
-simdutf_warn_unused size_t convert_latin1_to_utf16le(const char * input, size_t length, char16_t* utf16_output) noexcept {
-  return get_active_implementation()->convert_latin1_to_utf16le(input, length, utf16_output);
-}
-simdutf_warn_unused size_t convert_latin1_to_utf16be(const char * input, size_t length, char16_t* utf16_output) noexcept {
-  return get_active_implementation()->convert_latin1_to_utf16be(input, length, utf16_output);
-}
+
 simdutf_warn_unused result convert_latin1_to_utf16_with_errors(const char * input, size_t length, char16_t* utf16_output) noexcept {
   #if SIMDUTF_IS_BIG_ENDIAN
   return convert_latin1_to_utf16be_with_errors(input, length, utf16_output);

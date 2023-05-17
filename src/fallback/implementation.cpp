@@ -106,6 +106,7 @@ simdutf_warn_unused result implementation::validate_utf32_with_errors(const char
 }
 
 
+
 // ********************************
 simdutf_warn_unused size_t implementation::convert_latin1_to_utf16le(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
    return scalar::latin1_to_utf16::convert<endianness::LITTLE>(buf, len, utf16_output);
@@ -295,5 +296,3 @@ simdutf_warn_unused size_t implementation::utf32_length_from_utf8(const char * i
 
 } // namespace SIMDUTF_IMPLEMENTATION
 } // namespace simdutf
-
-#include "simdutf/fallback/end.h"

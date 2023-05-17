@@ -208,6 +208,7 @@ simdutf_warn_unused bool validate_utf32(const char32_t *buf, size_t len) noexcep
 simdutf_warn_unused result validate_utf32_with_errors(const char32_t *buf, size_t len) noexcept;
 
 
+
 // ***********************************************
 /**
  * Using native endianness; Convert possibly broken Latin1 string into UTF-16 string.
@@ -1290,7 +1291,11 @@ public:
    * @param utf16_buffer  the pointer to buffer that can hold conversion result
    * @return the number of written char16_t; 0 if the input was not valid Latin1 string
    */
-  simdutf_warn_unused virtual size_t convert_latin1_to_utf16le(const char * input, size_t length, char16_t* utf16_output) const noexcept = 0;
+  simdutf_warn_unused virtual size_t convert_latin1_to_utf16le(const char * input, size_t length, char16_t* utf16_output) const noexcept //= 0;
+  //This is temporary
+  {
+   return 0;
+  }
 
   /**
    * Convert possibly broken Latin1 string into UTF-16BE string.

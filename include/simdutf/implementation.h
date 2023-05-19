@@ -1724,6 +1724,14 @@ public:
    */
   simdutf_warn_unused virtual size_t convert_valid_utf32_to_utf8(const char32_t * input, size_t length, char* utf8_buffer) const noexcept = 0;
 
+
+
+  simdutf_warn_unused virtual size_t convert_utf32_to_latin1(const char32_t * input, size_t length, char* latin1_buffer) const noexcept = 0;
+/*   {
+    return 0;
+  }
+ */
+
   /**
    * Convert possibly broken UTF-32 string into UTF-16LE string.
    *
@@ -1836,6 +1844,9 @@ public:
    * @return the number of bytes required to encode the UTF-32 string as UTF-8
    */
   simdutf_warn_unused virtual size_t utf8_length_from_utf32(const char32_t * input, size_t length) const noexcept = 0;
+
+
+    simdutf_warn_unused virtual size_t latin1_length_from_utf32(const char32_t * input, size_t length) const noexcept = 0;
 
   /**
    * Compute the number of two-byte words that this UTF-32 string would require in UTF-16 format.

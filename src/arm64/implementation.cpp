@@ -30,6 +30,80 @@ simdutf_really_inline simd8<bool> must_be_2_3_continuation(const simd8<uint8_t> 
     return is_third_byte ^ is_fourth_byte;
 }
 
+// common functions for utf8 conversions
+simdutf_really_inline uint16x4_t convert_utf8_3_byte_to_utf16(uint8x16_t in) {
+  // Low half contains  10cccccc|1110aaaa
+  // High half contains 10bbbbbb|10bbbbbb
+#ifdef SIMDUTF_REGULAR_VISUAL_STUDIO
+  const uint8x16_t sh = make_uint8x16_t(0, 2, 3, 5, 6, 8, 9, 11, 1, 1, 4, 4, 7, 7, 10, 10);
+#else
+  const uint8x16_t sh = {0, 2, 3, 5, 6, 8, 9, 11, 1, 1, 4, 4, 7, 7, 10, 10};
+#endif
+  uint8x16_t perm = vqtbl1q_u8(in, sh);
+  // Split into half vectors.
+  // 10cccccc|1110aaaa
+  uint8x8_t perm_low = vget_low_u8(perm); // no-op
+  // 10bbbbbb|10bbbbbb
+  uint8x8_t perm_high = vget_high_u8(perm);
+  // xxxxxxxx 10bbbbbb
+  uint16x4_t mid = vreinterpret_u16_u8(perm_high); // no-op
+  // xxxxxxxx 1110aaaa
+  uint16x4_t high = vreinterpret_u16_u8(perm_low); // no-op
+  // Assemble with shift left insert.
+  // xxxxxxaa aabbbbbb
+  uint16x4_t mid_high = vsli_n_u16(mid, high, 6);
+  // (perm_low << 8) | (perm_low >> 8)
+  // xxxxxxxx 10cccccc
+  uint16x4_t low = vreinterpret_u16_u8(vrev16_u8(perm_low));
+  // Shift left insert into the low bits
+  // aaaabbbb bbcccccc
+  uint16x4_t composed = vsli_n_u16(low, mid_high, 6);
+  return composed;
+}
+
+simdutf_really_inline uint16x8_t convert_utf8_2_byte_to_utf16(uint8x16_t in) {
+  // Converts 6 2 byte UTF-8 characters to 6 UTF-16 characters.
+  // Technically this calculates 8, but 6 does better and happens more often
+  // (The languages which use these codepoints use ASCII spaces so 8 would need to be
+  // in the middle of a very long word).
+
+  // 10bbbbbb 110aaaaa
+  uint16x8_t upper = vreinterpretq_u16_u8(in);
+  // (in << 8) | (in >> 8)
+  // 110aaaaa 10bbbbbb
+  uint16x8_t lower = vreinterpretq_u16_u8(vrev16q_u8(in));
+  // 00000000 000aaaaa
+  uint16x8_t upper_masked = vandq_u16(upper, vmovq_n_u16(0x1F));
+  // Assemble with shift left insert.
+  // 00000aaa aabbbbbb
+  uint16x8_t composed = vsliq_n_u16(lower, upper_masked, 6);
+  return composed;
+}
+
+simdutf_really_inline uint16x8_t convert_utf8_1_to_2_byte_to_utf16(uint8x16_t in, size_t shufutf8_idx) {
+  // Converts 6 1-2 byte UTF-8 characters to 6 UTF-16 characters.
+  // This is a relatively easy scenario
+  // we process SIX (6) input code-words. The max length in bytes of six code
+  // words spanning between 1 and 2 bytes each is 12 bytes.
+  uint8x16_t sh = vld1q_u8(reinterpret_cast<const uint8_t*>(simdutf::tables::utf8_to_utf16::shufutf8[shufutf8_idx]));
+  // Shuffle
+  // 1 byte: 00000000 0bbbbbbb
+  // 2 byte: 110aaaaa 10bbbbbb
+  uint16x8_t perm = vreinterpretq_u16_u8(vqtbl1q_u8(in, sh));
+  // Mask
+  // 1 byte: 00000000 0bbbbbbb
+  // 2 byte: 00000000 00bbbbbb
+  uint16x8_t ascii = vandq_u16(perm, vmovq_n_u16(0x7f)); // 6 or 7 bits
+  // 1 byte: 00000000 00000000
+  // 2 byte: 000aaaaa 00000000
+  uint16x8_t highbyte = vandq_u16(perm, vmovq_n_u16(0x1f00)); // 5 bits
+  // Combine with a shift right accumulate
+  // 1 byte: 00000000 0bbbbbbb
+  // 2 byte: 00000aaa aabbbbbb
+  uint16x8_t composed = vsraq_n_u16(ascii, highbyte, 2);
+  return composed;
+}
+
 #include "arm64/arm_detect_encodings.cpp"
 
 #include "arm64/arm_validate_utf16.cpp"
@@ -58,6 +132,12 @@ simdutf_really_inline simd8<bool> must_be_2_3_continuation(const simd8<uint8_t> 
 // other functions
 #include "generic/utf8.h"
 #include "generic/utf16.h"
+
+// placeholder scalars
+#include "scalar/latin1.h"
+#include "scalar/utf8_to_latin1/valid_utf8_to_latin1.h"
+#include "scalar/utf8_to_latin1/utf8_to_latin1.h"
+
 //
 // Implementation-specific overrides
 //
@@ -152,6 +232,34 @@ simdutf_warn_unused result implementation::validate_utf32_with_errors(const char
   }
 }
 
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf8(const char * buf, size_t len, char* utf8_output) const noexcept {
+  return scalar::latin1_to_utf8::convert(buf,len,utf8_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf16le(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+  return scalar::latin1_to_utf16::convert<endianness::LITTLE>(buf, len, utf16_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf16be(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
+  return scalar::latin1_to_utf16::convert<endianness::BIG>(buf, len, utf16_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_latin1_to_utf32(const char* buf, size_t len, char32_t* latin1_output) const noexcept {
+  return scalar::latin1_to_utf32::convert(buf,len,latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_utf8_to_latin1(const char* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf8_to_latin1::convert(buf, len, latin1_output);
+}
+
+simdutf_warn_unused result implementation::convert_utf8_to_latin1_with_errors(const char* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf8_to_latin1::convert_with_errors(buf, len, latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_valid_utf8_to_latin1(const char* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf8_to_latin1::convert_valid(buf, len, latin1_output);
+}
+
 simdutf_warn_unused size_t implementation::convert_utf8_to_utf16le(const char* buf, size_t len, char16_t* utf16_output) const noexcept {
   utf8_to_utf16::validating_transcoder converter;
   return converter.convert<endianness::LITTLE>(buf, len, utf16_output);
@@ -195,6 +303,30 @@ simdutf_warn_unused result implementation::convert_utf8_to_utf32_with_errors(con
 simdutf_warn_unused size_t implementation::convert_valid_utf8_to_utf32(const char* input, size_t size,
     char32_t* utf32_output) const noexcept {
   return utf8_to_utf32::convert_valid(input, size,  utf32_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_utf16le_to_latin1(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert<endianness::LITTLE>(buf, len, latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_utf16be_to_latin1(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert<endianness::BIG>(buf, len, latin1_output);
+}
+
+simdutf_warn_unused result implementation::convert_utf16le_to_latin1_with_errors(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert_with_errors<endianness::LITTLE>(buf, len, latin1_output);
+}
+
+simdutf_warn_unused result implementation::convert_utf16be_to_latin1_with_errors(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert_with_errors<endianness::BIG>(buf, len, latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_valid_utf16be_to_latin1(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert_valid<endianness::BIG>(buf, len, latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_valid_utf16le_to_latin1(const char16_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf16_to_latin1::convert_valid<endianness::LITTLE>(buf, len, latin1_output);
 }
 
 simdutf_warn_unused size_t implementation::convert_utf16le_to_utf8(const char16_t* buf, size_t len, char* utf8_output) const noexcept {
@@ -359,6 +491,18 @@ simdutf_warn_unused result implementation::convert_utf16be_to_utf32_with_errors(
   return ret.first;
 }
 
+simdutf_warn_unused size_t implementation::convert_utf32_to_latin1(const char32_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf32_to_latin1::convert(buf,len,latin1_output);
+}
+
+simdutf_warn_unused result implementation::convert_utf32_to_latin1_with_errors(const char32_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf32_to_latin1::convert_with_errors(buf,len,latin1_output);
+}
+
+simdutf_warn_unused size_t implementation::convert_valid_utf32_to_latin1(const char32_t* buf, size_t len, char* latin1_output) const noexcept {
+  return scalar::utf32_to_latin1::convert_valid(buf,len,latin1_output);
+}
+
 simdutf_warn_unused size_t implementation::convert_valid_utf32_to_utf8(const char32_t* buf, size_t len, char* utf8_output) const noexcept {
   return convert_utf32_to_utf8(buf, len, utf8_output);
 }
@@ -455,6 +599,22 @@ simdutf_warn_unused size_t implementation::count_utf8(const char * input, size_t
   return utf8::count_code_points(input, length);
 }
 
+simdutf_warn_unused size_t implementation::latin1_length_from_utf8(const char* buf, size_t len) const noexcept {
+  return scalar::utf8::latin1_length_from_utf8(buf,len);
+}
+
+simdutf_warn_unused size_t implementation::latin1_length_from_utf16(size_t length) const noexcept {
+  return scalar::utf16::latin1_length_from_utf16(length);
+}
+
+simdutf_warn_unused size_t implementation::latin1_length_from_utf32( size_t length) const noexcept {
+  return scalar::utf32::latin1_length_from_utf32(length);
+}
+
+simdutf_warn_unused size_t implementation::utf8_length_from_latin1(const char * input, size_t length) const noexcept {
+  return scalar::latin1::utf8_length_from_latin1(input,length);
+}
+
 simdutf_warn_unused size_t implementation::utf8_length_from_utf16le(const char16_t * input, size_t length) const noexcept {
   return utf16::utf8_length_from_utf16<endianness::LITTLE>(input, length);
 }
@@ -462,6 +622,18 @@ simdutf_warn_unused size_t implementation::utf8_length_from_utf16le(const char16
 simdutf_warn_unused size_t implementation::utf8_length_from_utf16be(const char16_t * input, size_t length) const noexcept {
   return utf16::utf8_length_from_utf16<endianness::BIG>(input, length);
 }
+
+
+simdutf_warn_unused size_t implementation::utf16_length_from_latin1(size_t length) const noexcept {
+  return scalar::latin1::utf16_length_from_latin1(length);
+}
+
+
+simdutf_warn_unused size_t implementation::utf32_length_from_latin1(size_t length) const noexcept {
+  return scalar::latin1::utf32_length_from_latin1(length);
+}
+
+
 
 simdutf_warn_unused size_t implementation::utf32_length_from_utf16le(const char16_t * input, size_t length) const noexcept {
   return utf16::utf32_length_from_utf16<endianness::LITTLE>(input, length);

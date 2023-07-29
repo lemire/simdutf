@@ -1,0 +1,1 @@
+/usr/bin/clang++ -O3 -DNDEBUG CMakeFiles/amalgamation_demo.dir/amalgamation_demo.cpp.o -o amalgamation_demo 

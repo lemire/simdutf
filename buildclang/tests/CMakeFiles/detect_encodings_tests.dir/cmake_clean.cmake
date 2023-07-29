@@ -1,0 +1,11 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/detect_encodings_tests.dir/detect_encodings_tests.cpp.o"
+  "CMakeFiles/detect_encodings_tests.dir/detect_encodings_tests.cpp.o.d"
+  "detect_encodings_tests"
+  "detect_encodings_tests.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/detect_encodings_tests.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

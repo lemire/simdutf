@@ -54,6 +54,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <cpuid.h>
 #endif
 
+#include "simdutf/portability.h"
+
 namespace simdutf {
 namespace internal {
 
@@ -75,13 +77,50 @@ enum instruction_set {
   AVX512BW = 0x4000,
   AVX512VL = 0x8000,
   AVX512VBMI2 = 0x10000,
-  AVX512VPOPCNTDQ = 0x2000
+  AVX512VPOPCNTDQ = 0x2000,
+  RVV = 0x4000,
+  ZVBB = 0x8000,
 };
 
 #if defined(__PPC64__)
 
 static inline uint32_t detect_supported_architectures() {
   return instruction_set::ALTIVEC;
+}
+
+#elif SIMDUTF_IS_RISCV64
+
+#if defined(__linux__)
+#include <unistd.h>
+#include <asm/hwprobe.h>
+#include <sys/syscall.h>
+#endif
+
+static inline uint32_t detect_supported_architectures() {
+  uint32_t host_isa = instruction_set::DEFAULT;
+#if SIMDUTF_IS_RVV
+  host_isa |= instruction_set::RVV;
+#endif
+#if SIMDUTF_IS_ZVBB
+  host_isa |= instruction_set::ZVBB;
+#endif
+#if defined(__linux__) && defined(RISCV_HWPROBE_IMA_V)
+  riscv_hwprobe probes[] = {
+    { RISCV_HWPROBE_IMA_V, 0 },
+#ifdef RISCV_HWPROBE_EXT_ZVBB
+    { RISCV_HWPROBE_EXT_ZVBB, 0 },
+#endif
+  };
+  syscall(__NR_riscv_hwprobe,
+          probes, sizeof probes/sizeof *probes, 0, nullptr, 0);
+  if (probes[0].key == RISCV_HWPROBE_IMA_V)
+    host_isa |= instruction_set::RVV;
+#ifdef RISCV_HWPROBE_EXT_ZVBB
+  if (probes[1].key == RISCV_HWPROBE_EXT_ZVBB)
+    host_isa |= instruction_set::ZVBB;
+#endif
+#endif
+  return host_isa;
 }
 
 #elif defined(__aarch64__) || defined(_M_ARM64)

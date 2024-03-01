@@ -1,0 +1,29 @@
+name: Ubuntu RISC-V
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: uraimo/run-on-arch-action@v4
+        name: Test
+        id: runcmd
+        with:
+          arch: riscv64
+          githubToken: ${{ github.token }}
+          distro: ubuntu_latest
+          install: |
+            apt-get update -q -y
+            apt-get install -y cmake make g++
+          run: |
+            CXXFLAGS="-march=rv64gcv" cmake -DCMAKE_BUILD_TYPE=Release -B build
+            cmake --build build -j=2
+            ctest --output-on-failure --test-dir build

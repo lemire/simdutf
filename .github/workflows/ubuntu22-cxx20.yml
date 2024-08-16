@@ -1,4 +1,4 @@
-name: Ubuntu 22.04 Sanitized CI (GCC 12, CXX 20)
+name: Ubuntu 22.04 CI (GCC 12, CXX 20)
 
 on:
   push:

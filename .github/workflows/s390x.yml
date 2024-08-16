@@ -1,4 +1,4 @@
-name: Ubuntu s390x (GCC 11)
+name: Ubuntu s390x
 
 on:
   push:

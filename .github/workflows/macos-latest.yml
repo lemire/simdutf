@@ -1,4 +1,4 @@
-name: macos-latest Sanitized CI
+name: macos-latest CI
 
 on:
   push:

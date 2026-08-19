@@ -260,6 +260,40 @@ simdutf_warn_unused utf8_result implementation::validate_utf8_with_counts(
   size_t count{0};
   size_t continuations{0};
   size_t four_byte_leads{0};
+  // Get the 512-bit reads onto a 64-byte boundary. A load that straddles a
+  // cache line costs two accesses, which is worth up to 14% here.
+  //
+  // We cannot simply mask-load a short head block: the checker carries state
+  // from one block to the next, and zero padding in the middle of a character
+  // would look like a truncated sequence. Instead we consume one full
+  // (unaligned) block, count only the bytes we are about to leave behind, and
+  // re-seed the cross-block state from the three bytes preceding the aligned
+  // start. That seed needs those three bytes to be inside the buffer, hence
+  // the requirement that the adjustment be at least 3.
+  if (len >= 1024) {
+    const uintptr_t misalignment = reinterpret_cast<uintptr_t>(ptr) % 64;
+    if (misalignment != 0 && misalignment <= 61) {
+      const size_t adjustment = 64 - misalignment;
+      const __m512i head = _mm512_loadu_si512((const __m512i *)ptr);
+      checker.check_next_input(head);
+      if (simdutf_unlikely(checker.errors())) {
+        return scalar::utf8::rewind_and_validate_with_counts(buf, buf, len);
+      }
+      const __mmask64 keep = ~UINT64_C(0) >> (64 - adjustment);
+      const __m512i c0c0 = _mm512_set1_epi32(0xc0c0c0c0);
+      const __m512i f0f0 = _mm512_set1_epi32(0xf0f0f0f0);
+      continuations += count_ones(_mm512_cmplt_epi8_mask(head, c0c0) & keep);
+      four_byte_leads += count_ones(_mm512_cmpge_epu8_mask(head, f0f0) & keep);
+      ptr += adjustment;
+      count = adjustment;
+      // Only the top three lanes are read. Masked-out lanes never fault, so
+      // this is safe even though ptr - 64 may point before buf.
+      const __m512i prev3 = _mm512_maskz_loadu_epi8(
+          UINT64_C(0xE000000000000000), (const __m512i *)(ptr - 64));
+      checker.prev_input_block = prev3;
+      checker.prev_incomplete = is_incomplete(prev3);
+    }
+  }
   for (; end - ptr >= 64; ptr += 64) {
     const __m512i utf8 = _mm512_loadu_si512((const __m512i *)ptr);
     // check_next_input returns true for a pure-ASCII block. ASCII bytes are
@@ -280,6 +314,39 @@ simdutf_warn_unused utf8_result implementation::validate_utf8_with_counts(
     if (!ascii) {
       continuations += utf8_count_continuations(utf8);
       four_byte_leads += utf8_count_4_byte_leads(utf8);
+    } else {
+      // Runs of ASCII are common, and ASCII carries no cross-block state and
+      // contributes to neither counter, so we can scan past a run with four
+      // vectors per compare-and-branch instead of one. A 4-wide probe that
+      // fails has read 256 bytes for nothing, which costs real throughput on
+      // mixed text where ASCII runs are short, so we probe a single block
+      // first and only widen once we know we are in a run of at least two.
+      const __m512i v80 = _mm512_set1_epi8(char(0x80));
+      const char *q = ptr + 64;
+      if (end - q >= 64 &&
+          _mm512_test_epi8_mask(_mm512_loadu_si512((const __m512i *)q), v80) ==
+              0) {
+        q += 64;
+        while (end - q >= 256) {
+          const __m512i b0 = _mm512_loadu_si512((const __m512i *)q);
+          const __m512i b1 = _mm512_loadu_si512((const __m512i *)(q + 64));
+          const __m512i b2 = _mm512_loadu_si512((const __m512i *)(q + 128));
+          const __m512i b3 = _mm512_loadu_si512((const __m512i *)(q + 192));
+          const __m512i any =
+              _mm512_or_si512(_mm512_or_si512(b0, b1), _mm512_or_si512(b2, b3));
+          if (_mm512_test_epi8_mask(any, v80) != 0) {
+            break;
+          }
+          q += 256;
+        }
+        while (end - q >= 64 &&
+               _mm512_test_epi8_mask(_mm512_loadu_si512((const __m512i *)q),
+                                     v80) == 0) {
+          q += 64;
+        }
+      }
+      count += size_t(q - (ptr + 64));
+      ptr = q - 64; // the loop increment puts us back on q
     }
     count += 64;
   }

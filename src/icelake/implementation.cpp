@@ -260,20 +260,6 @@ simdutf_warn_unused utf8_result implementation::validate_utf8_with_counts(
   size_t count{0};
   size_t continuations{0};
   size_t four_byte_leads{0};
-  // Get the 512-bit reads onto a 64-byte boundary. A load that straddles a
-  // cache line costs two accesses, which is worth up to 14% here.
-  //
-  // The head block is loaded from the aligned address at or below buf, with
-  // the lanes preceding buf masked off so that they read as zero. Those lanes
-  // are never fetched, so nothing outside the buffer is read. NUL is a
-  // complete, valid one-byte character, so the padding can neither create nor
-  // hide an error, it is neither a continuation nor a four-byte lead so it
-  // contributes to neither counter, and it leaves the cross-block state
-  // exactly as if the input had begun with that many NUL bytes -- which is
-  // what a freshly constructed checker, whose prev_input_block and
-  // prev_incomplete are both zero, already assumes. Note that padding at the
-  // *end* of a short head block would not work: zeros in the middle of a
-  // character would look like a truncated sequence.
   if (len >= 1024) {
     const size_t misalignment = reinterpret_cast<uintptr_t>(ptr) % 64;
     if (misalignment != 0) {

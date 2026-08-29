@@ -299,12 +299,6 @@ simdutf_warn_unused utf8_result implementation::validate_utf8_with_counts(
       continuations += utf8_count_continuations(utf8);
       four_byte_leads += utf8_count_4_byte_leads(utf8);
     } else {
-      // Runs of ASCII are common, and ASCII carries no cross-block state and
-      // contributes to neither counter, so we can scan past a run with four
-      // vectors per compare-and-branch instead of one. A 4-wide probe that
-      // fails has read 256 bytes for nothing, which costs real throughput on
-      // mixed text where ASCII runs are short, so we probe a single block
-      // first and only widen once we know we are in a run of at least two.
       const __m512i v80 = _mm512_set1_epi8(char(0x80));
       const char *q = ptr + 64;
       if (end - q >= 64 &&

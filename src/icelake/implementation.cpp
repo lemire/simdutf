@@ -263,35 +263,33 @@ simdutf_warn_unused utf8_result implementation::validate_utf8_with_counts(
   // Get the 512-bit reads onto a 64-byte boundary. A load that straddles a
   // cache line costs two accesses, which is worth up to 14% here.
   //
-  // We cannot simply mask-load a short head block: the checker carries state
-  // from one block to the next, and zero padding in the middle of a character
-  // would look like a truncated sequence. Instead we consume one full
-  // (unaligned) block, count only the bytes we are about to leave behind, and
-  // re-seed the cross-block state from the three bytes preceding the aligned
-  // start. That seed needs those three bytes to be inside the buffer, hence
-  // the requirement that the adjustment be at least 3.
+  // The head block is loaded from the aligned address at or below buf, with
+  // the lanes preceding buf masked off so that they read as zero. Those lanes
+  // are never fetched, so nothing outside the buffer is read. NUL is a
+  // complete, valid one-byte character, so the padding can neither create nor
+  // hide an error, it is neither a continuation nor a four-byte lead so it
+  // contributes to neither counter, and it leaves the cross-block state
+  // exactly as if the input had begun with that many NUL bytes -- which is
+  // what a freshly constructed checker, whose prev_input_block and
+  // prev_incomplete are both zero, already assumes. Note that padding at the
+  // *end* of a short head block would not work: zeros in the middle of a
+  // character would look like a truncated sequence.
   if (len >= 1024) {
-    const uintptr_t misalignment = reinterpret_cast<uintptr_t>(ptr) % 64;
-    if (misalignment != 0 && misalignment <= 61) {
-      const size_t adjustment = 64 - misalignment;
-      const __m512i head = _mm512_loadu_si512((const __m512i *)ptr);
-      checker.check_next_input(head);
+    const size_t misalignment = reinterpret_cast<uintptr_t>(ptr) % 64;
+    if (misalignment != 0) {
+      const char *const aligned = ptr - misalignment;
+      const __m512i head = _mm512_maskz_loadu_epi8(~UINT64_C(0) << misalignment,
+                                                   (const __m512i *)aligned);
+      const bool ascii = checker.check_next_input(head);
       if (simdutf_unlikely(checker.errors())) {
         return scalar::utf8::rewind_and_validate_with_counts(buf, buf, len);
       }
-      const __mmask64 keep = ~UINT64_C(0) >> (64 - adjustment);
-      const __m512i c0c0 = _mm512_set1_epi32(0xc0c0c0c0);
-      const __m512i f0f0 = _mm512_set1_epi32(0xf0f0f0f0);
-      continuations += count_ones(_mm512_cmplt_epi8_mask(head, c0c0) & keep);
-      four_byte_leads += count_ones(_mm512_cmpge_epu8_mask(head, f0f0) & keep);
-      ptr += adjustment;
-      count = adjustment;
-      // Only the top three lanes are read. Masked-out lanes never fault, so
-      // this is safe even though ptr - 64 may point before buf.
-      const __m512i prev3 = _mm512_maskz_loadu_epi8(
-          UINT64_C(0xE000000000000000), (const __m512i *)(ptr - 64));
-      checker.prev_input_block = prev3;
-      checker.prev_incomplete = is_incomplete(prev3);
+      if (!ascii) {
+        continuations += utf8_count_continuations(head);
+        four_byte_leads += utf8_count_4_byte_leads(head);
+      }
+      ptr = aligned + 64;
+      count = 64 - misalignment;
     }
   }
   for (; end - ptr >= 64; ptr += 64) {

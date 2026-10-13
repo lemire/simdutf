@@ -20,7 +20,7 @@
 // Measured against the Rust memchr crate (memmem::find and a prebuilt
 // memmem::Finder, whichever is faster per cell) on ten 1 MiB corpora, needles
 // of 8 to 2048 bytes, present and absent: faster in 69 of 79 cells on an Apple
-// M4 Max and in 67 of 79 on AWS Graviton 4 (Neoverse V3).
+// M4 Max and in 67 of 79 on AWS Graviton 5 (Neoverse V3).
 
 namespace simdutf {
 namespace SIMDUTF_IMPLEMENTATION {

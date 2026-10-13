@@ -206,6 +206,7 @@ convert_utf8_1_to_2_byte_to_utf16(uint8x16_t in, size_t shufutf8_idx) {
 #if SIMDUTF_FEATURE_BASE64
   #include "generic/base64lengths.h"
   #include "generic/search.h"
+  #include "arm64/arm_search_hybrid.h"
 #endif // SIMDUTF_FEATURE_BASE64
 
 //
@@ -1423,7 +1424,13 @@ const char16_t *implementation::find(const char16_t *start, const char16_t *end,
 const char *implementation::search(const char *start, const char *end,
                                    const char *needle_start,
                                    const char *needle_end) const noexcept {
+#ifdef SIMDUTF_ARM64_SEARCH_NEEDLE_HAMMER
   return search::search_range<search_ops>(start, end, needle_start, needle_end);
+#else
+  // Rare-pair filter switching to three positional bytes (arm_search_hybrid.h).
+  return search_hybrid::search_range<search_ops>(start, end, needle_start,
+                                                 needle_end);
+#endif
 }
 
 simdutf_warn_unused size_t implementation::binary_length_from_base64(

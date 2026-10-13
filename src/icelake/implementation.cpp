@@ -86,6 +86,7 @@ using namespace simd;
 #if SIMDUTF_FEATURE_BASE64
   #include "icelake/icelake_base64.inl.cpp"
   #include "icelake/icelake_find.inl.cpp"
+  #include "icelake/icelake_search.inl.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 
 #include <cstdint>
@@ -2211,6 +2212,12 @@ const char *implementation::find(const char *start, const char *end,
 const char16_t *implementation::find(const char16_t *start, const char16_t *end,
                                      char16_t character) const noexcept {
   return util_find(start, end, character);
+}
+
+const char *implementation::search(const char *start, const char *end,
+                                   const char *needle_start,
+                                   const char *needle_end) const noexcept {
+  return search::search_range(start, end, needle_start, needle_end);
 }
 
 simdutf_warn_unused size_t implementation::binary_length_from_base64(

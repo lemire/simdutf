@@ -137,6 +137,11 @@ target_link_libraries(find_tests
   PUBLIC simdutf::tests::helpers
          simdutf::tests::reference)
 
+add_cpp_test(search_tests)
+target_link_libraries(search_tests
+  PUBLIC simdutf::tests::helpers
+         simdutf::tests::reference)
+
 add_cpp_test(convert_latin1_to_utf8_tests)
 target_link_libraries(convert_latin1_to_utf8_tests
   PUBLIC simdutf::tests::helpers

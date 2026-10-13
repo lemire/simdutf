@@ -51,6 +51,7 @@ SIMDUTF_POP_DISABLE_WARNINGS
 #endif // SIMDUTF_FEATURE_LATIN1
 #if SIMDUTF_FEATURE_BASE64
   #include "simdutf/scalar/base64.h"
+  #include "simdutf/scalar/search.h"
 #endif // SIMDUTF_FEATURE_BASE64
 
 #if SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_UTF32

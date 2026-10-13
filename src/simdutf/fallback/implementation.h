@@ -324,6 +324,9 @@ public:
                    char character) const noexcept override;
   const char16_t *find(const char16_t *start, const char16_t *end,
                        char16_t character) const noexcept override;
+  const char *search(const char *start, const char *end,
+                     const char *needle_start,
+                     const char *needle_end) const noexcept override;
 
 #endif // SIMDUTF_FEATURE_BASE64
 };

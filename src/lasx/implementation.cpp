@@ -168,6 +168,7 @@ convert_utf8_1_to_2_byte_to_utf16(__m128i in, size_t shufutf8_idx) {
 #if SIMDUTF_FEATURE_BASE64
   #include "lasx/lasx_base64.cpp"
   #include "lasx/lasx_find.cpp"
+  #include "lasx/lasx_search.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 
 } // namespace
@@ -223,6 +224,7 @@ convert_utf8_1_to_2_byte_to_utf16(__m128i in, size_t shufutf8_idx) {
 #endif // SIMDUTF_FEATURE_UTF32
 #if SIMDUTF_FEATURE_BASE64
   #include "generic/base64lengths.h"
+  #include "generic/search.h"
 #endif // SIMDUTF_FEATURE_BASE64
 
 //
@@ -1506,6 +1508,12 @@ const char *implementation::find(const char *start, const char *end,
 const char16_t *implementation::find(const char16_t *start, const char16_t *end,
                                      char16_t character) const noexcept {
   return util_find(start, end, character);
+}
+
+const char *implementation::search(const char *start, const char *end,
+                                   const char *needle_start,
+                                   const char *needle_end) const noexcept {
+  return search::search_range<search_ops>(start, end, needle_start, needle_end);
 }
 
 simdutf_warn_unused size_t implementation::binary_length_from_base64(

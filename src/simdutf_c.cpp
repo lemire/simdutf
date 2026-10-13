@@ -580,6 +580,10 @@ const char16_t *simdutf_find_utf16(const char16_t *start, const char16_t *end,
                                    char16_t character) {
   return simdutf::find(start, end, character);
 }
+const char *simdutf_search(const char *start, const char *end,
+                           const char *needle_start, const char *needle_end) {
+  return simdutf::search(start, end, needle_start, needle_end);
+}
 
 /* --- base64 helpers --- */
 size_t simdutf_maximal_binary_length_from_base64(const char *input,

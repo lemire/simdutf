@@ -99,3 +99,4 @@ target_link_libraries(shortbench PUBLIC simdutf::benchmarks::benchmark)
 target_compile_features(shortbench PRIVATE cxx_std_20)
 
 add_subdirectory(find)
+add_subdirectory(search)

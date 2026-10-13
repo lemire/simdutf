@@ -100,6 +100,7 @@ enum class ErrorReporting {
 
 #if SIMDUTF_FEATURE_BASE64
   #include "ppc64/ppc64_base64.cpp"
+  #include "ppc64/ppc64_search.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 
 } // unnamed namespace
@@ -153,6 +154,7 @@ enum class ErrorReporting {
 #if SIMDUTF_FEATURE_BASE64
   #include "generic/base64.h"
   #include "generic/find.h"
+  #include "generic/search.h"
 #endif // SIMDUTF_FEATURE_BASE64
 
 #include "ppc64/templates.cpp"
@@ -997,6 +999,12 @@ const char *implementation::find(const char *start, const char *end,
 const char16_t *implementation::find(const char16_t *start, const char16_t *end,
                                      char16_t character) const noexcept {
   return util::find(start, end, character);
+}
+
+const char *implementation::search(const char *start, const char *end,
+                                   const char *needle_start,
+                                   const char *needle_end) const noexcept {
+  return search::search_range<search_ops>(start, end, needle_start, needle_end);
 }
 #endif // SIMDUTF_FEATURE_BASE64
 

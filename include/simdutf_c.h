@@ -374,6 +374,10 @@ simdutf_convert_utf32_to_latin1_with_errors(const char32_t *input,
 const char *simdutf_find(const char *start, const char *end, char character);
 const char16_t *simdutf_find_utf16(const char16_t *start, const char16_t *end,
                                    char16_t character);
+/* First occurrence of the byte string [needle_start, needle_end) in
+   [start, end), or end if it does not occur. */
+const char *simdutf_search(const char *start, const char *end,
+                           const char *needle_start, const char *needle_end);
 
 /* --- Base64 enums and helpers --- */
 typedef enum simdutf_base64_options {

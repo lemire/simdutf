@@ -150,6 +150,7 @@ convert_utf8_1_to_2_byte_to_utf16(uint8x16_t in, size_t shufutf8_idx) {
 #if SIMDUTF_FEATURE_BASE64
   #include "arm64/arm_base64.cpp"
   #include "arm64/arm_find.cpp"
+  #include "arm64/arm_search.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 #if SIMDUTF_FEATURE_UTF32 && SIMDUTF_FEATURE_LATIN1
   #include "arm64/arm_convert_utf32_to_latin1.cpp"
@@ -204,6 +205,7 @@ convert_utf8_1_to_2_byte_to_utf16(uint8x16_t in, size_t shufutf8_idx) {
 #endif // SIMDUTF_FEATURE_UTF8 && SIMDUTF_FEATURE_LATIN1
 #if SIMDUTF_FEATURE_BASE64
   #include "generic/base64lengths.h"
+  #include "generic/search.h"
 #endif // SIMDUTF_FEATURE_BASE64
 
 //
@@ -1416,6 +1418,12 @@ const char *implementation::find(const char *start, const char *end,
 const char16_t *implementation::find(const char16_t *start, const char16_t *end,
                                      char16_t character) const noexcept {
   return util_find(start, end, character);
+}
+
+const char *implementation::search(const char *start, const char *end,
+                                   const char *needle_start,
+                                   const char *needle_end) const noexcept {
+  return search::search_range<search_ops>(start, end, needle_start, needle_end);
 }
 
 simdutf_warn_unused size_t implementation::binary_length_from_base64(

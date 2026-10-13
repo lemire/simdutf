@@ -596,6 +596,32 @@ const char16_t *implementation::find(const char16_t *start, const char16_t *end,
   }
   return end;
 }
+
+// Two-way after a first-byte scan with memchr, which the C library
+// vectorizes on most systems.
+const char *implementation::search(const char *start, const char *end,
+                                   const char *needle_start,
+                                   const char *needle_end) const noexcept {
+  const size_t n = start < end ? size_t(end - start) : 0;
+  const size_t m =
+      needle_start < needle_end ? size_t(needle_end - needle_start) : 0;
+  if (m == 0) {
+    return start;
+  }
+  if (n < m) {
+    return end;
+  }
+  const void *p = std::memchr(start, needle_start[0], n - m + 1);
+  if (p == nullptr) {
+    return end;
+  }
+  if (m == 1) {
+    return static_cast<const char *>(p);
+  }
+  const size_t r = scalar::search::twoway(
+      start, n, needle_start, m, size_t(static_cast<const char *>(p) - start));
+  return r == scalar::search::npos ? end : start + r;
+}
 #endif // SIMDUTF_FEATURE_BASE64
 
 } // namespace SIMDUTF_IMPLEMENTATION

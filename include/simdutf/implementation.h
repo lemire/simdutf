@@ -4594,6 +4594,9 @@ simdutf_warn_unused const char *find(const char *start, const char *end,
                                      char character) noexcept;
 simdutf_warn_unused const char16_t *
 find(const char16_t *start, const char16_t *end, char16_t character) noexcept;
+simdutf_warn_unused const char *search(const char *start, const char *end,
+                                       const char *needle_start,
+                                       const char *needle_end) noexcept;
 } // namespace detail
 
 /**
@@ -4634,6 +4637,48 @@ find(const char16_t *start, const char16_t *end, char16_t character) noexcept {
   #endif
   {
     return detail::find(start, end, character);
+  }
+}
+
+/**
+ * Find the first occurrence of a byte string (the needle) in another (the
+ * haystack), as std::search does: the comparison is byte by byte, whatever
+ * the encoding. If the needle does not occur, return a pointer to the end of
+ * the haystack. An empty needle occurs at the start of the haystack.
+ *
+ * The search takes time linear in the sizes of the haystack and of the
+ * needle, whatever the input. Neither string needs to be null-terminated, and
+ * no byte outside the two ranges is read.
+ *
+ * @param start        the start of the haystack
+ * @param end          the end of the haystack
+ * @param needle_start the start of the needle
+ * @param needle_end   the end of the needle
+ * @return a pointer to the first occurrence of the needle in the haystack,
+ * or a pointer to the end of the haystack if the needle does not occur.
+ */
+simdutf_warn_unused simdutf_really_inline simdutf_constexpr23 const char *
+search(const char *start, const char *end, const char *needle_start,
+       const char *needle_end) noexcept {
+  #if SIMDUTF_CPLUSPLUS23
+  if consteval {
+    if (needle_start == needle_end)
+      return start;
+    for (const char *p = start; end - p >= needle_end - needle_start; ++p) {
+      const char *a = p;
+      const char *b = needle_start;
+      while (b != needle_end && *a == *b) {
+        ++a;
+        ++b;
+      }
+      if (b == needle_end)
+        return p;
+    }
+    return end;
+  } else
+  #endif
+  {
+    return detail::search(start, end, needle_start, needle_end);
   }
 }
 }
@@ -7478,6 +7523,21 @@ public:
                            char character) const noexcept = 0;
   virtual const char16_t *find(const char16_t *start, const char16_t *end,
                                char16_t character) const noexcept = 0;
+
+  /**
+   * Find the first occurrence of a byte string (the needle) in another (the
+   * haystack). If the needle does not occur, return a pointer to the end of
+   * the haystack. An empty needle occurs at the start of the haystack.
+   * @param start        the start of the haystack
+   * @param end          the end of the haystack
+   * @param needle_start the start of the needle
+   * @param needle_end   the end of the needle
+   * @return a pointer to the first occurrence of the needle in the haystack,
+   * or a pointer to the end of the haystack if the needle does not occur.
+   */
+  virtual const char *search(const char *start, const char *end,
+                             const char *needle_start,
+                             const char *needle_end) const noexcept = 0;
 #endif // SIMDUTF_FEATURE_BASE64
 
 #ifdef SIMDUTF_INTERNAL_TESTS

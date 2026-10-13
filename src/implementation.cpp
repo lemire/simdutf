@@ -876,6 +876,12 @@ public:
     return set_best()->find(start, end, character);
   }
 
+  const char *search(const char *start, const char *end,
+                     const char *needle_start,
+                     const char *needle_end) const noexcept override {
+    return set_best()->search(start, end, needle_start, needle_end);
+  }
+
   simdutf_warn_unused size_t binary_length_from_base64(
       const char *input, size_t length) const noexcept override {
     return set_best()->binary_length_from_base64(input, length);
@@ -1477,6 +1483,10 @@ public:
   }
   const char16_t *find(const char16_t *, const char16_t *,
                        char16_t) const noexcept override {
+    return nullptr;
+  }
+  const char *search(const char *, const char *, const char *,
+                     const char *) const noexcept override {
     return nullptr;
   }
   simdutf_warn_unused size_t
@@ -2592,6 +2602,12 @@ simdutf_warn_unused const char16_t *detail::find(const char16_t *start,
                                                  const char16_t *end,
                                                  char16_t character) noexcept {
   return get_default_implementation()->find(start, end, character);
+}
+simdutf_warn_unused const char *
+detail::search(const char *start, const char *end, const char *needle_start,
+               const char *needle_end) noexcept {
+  return get_default_implementation()->search(start, end, needle_start,
+                                              needle_end);
 }
 
 simdutf_warn_unused size_t

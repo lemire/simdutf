@@ -35,6 +35,7 @@ namespace SIMDUTF_IMPLEMENTATION {
 #if SIMDUTF_FEATURE_BASE64
   #include "rvv/rvv_base64.cpp"
   #include "rvv/rvv_find.cpp"
+  #include "rvv/rvv_search.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 
 #if SIMDUTF_FEATURE_UTF16

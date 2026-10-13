@@ -2858,6 +2858,43 @@ simdutf_warn_unused const char16_t *find(const char16_t *start, const char16_t *
                               char16_t character) noexcept;
 ```
 
+## Search
+
+`simdutf::search` finds the first occurrence of a byte string (the needle) in another (the haystack), as `std::search` or `memmem` do. The comparison is byte by byte: it applies to UTF-8, Latin 1, ASCII or binary data alike, and a UTF-8 needle that is valid UTF-8 can only match at a character boundary of a valid UTF-8 haystack.
+
+```cpp
+  std::string haystack = "The quick brown fox jumps over the lazy dog";
+  std::string needle = "lazy";
+
+  const char *result =
+      simdutf::search(haystack.data(), haystack.data() + haystack.size(),
+                      needle.data(), needle.data() + needle.size());
+  // result points at "lazy dog" (offset 35)
+```
+
+The search filters every candidate position on two to four needle bytes, many positions per instruction (16 to 64 bytes per register depending on the kernel), and verifies the survivors. The search counts the work it does, and when an input makes the filter ineffective it resumes with a linear-time algorithm (Crochemore-Perrin two-way), so that every search takes time linear in the sizes of the haystack and the needle. Neither string needs to be null terminated, and no byte outside the two ranges is read.
+
+```cpp
+/**
+ * Find the first occurrence of a byte string (the needle) in another (the
+ * haystack), as std::search does: the comparison is byte by byte, whatever
+ * the encoding. If the needle does not occur, return a pointer to the end of
+ * the haystack. An empty needle occurs at the start of the haystack.
+ *
+ * @param start        the start of the haystack
+ * @param end          the end of the haystack
+ * @param needle_start the start of the needle
+ * @param needle_end   the end of the needle
+ * @return a pointer to the first occurrence of the needle in the haystack,
+ * or a pointer to the end of the haystack if the needle does not occur.
+ */
+simdutf_warn_unused const char *search(const char *start, const char *end,
+                                       const char *needle_start,
+                                       const char *needle_end) noexcept;
+```
+
+The C API provides `simdutf_search` with the same parameters.
+
 ## C++20 and std::span usage in simdutf
 
 If you are compiling with C++20 or later, span support is enabled. This allows you to use simdutf in a safer and more expressive way, without manually handling pointers and sizes.

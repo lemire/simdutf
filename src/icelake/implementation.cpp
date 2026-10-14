@@ -87,6 +87,7 @@ using namespace simd;
   #include "icelake/icelake_base64.inl.cpp"
   #include "icelake/icelake_find.inl.cpp"
   #include "icelake/icelake_search.inl.cpp"
+  #include "icelake/icelake_search_guardzilla.inl.cpp"
 #endif // SIMDUTF_FEATURE_BASE64
 
 #include <cstdint>
@@ -2217,7 +2218,12 @@ const char16_t *implementation::find(const char16_t *start, const char16_t *end,
 const char *implementation::search(const char *start, const char *end,
                                    const char *needle_start,
                                    const char *needle_end) const noexcept {
+#ifdef SIMDUTF_ICELAKE_SEARCH_NEEDLE_HAMMER
   return search::search_range(start, end, needle_start, needle_end);
+#else
+  // Guardzilla (icelake_search_guardzilla.inl.cpp).
+  return search_guardzilla::search_range(start, end, needle_start, needle_end);
+#endif
 }
 
 simdutf_warn_unused size_t implementation::binary_length_from_base64(
